@@ -1,0 +1,17 @@
+{
+  "name": "Bilal Music Player",
+  "short_name": "Music Player",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#121212",
+  "theme_color": "#1DB954",
+  "description": "An offline music player that plays local files.",
+  "icons": [
+    {
+      "src": "icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

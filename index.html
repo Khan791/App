@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bilal Music Player</title>
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#1DB954"/>
+    <link rel="manifest" href="manifest.json">
+    <style>
+        :root { --primary-color: #1DB954; --background-color: #121212; --surface-color: #181818; --surface-color-hover: #282828; --text-color: #FFFFFF; --text-secondary-color: #B3B3B3; }
+        * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif; background-color: var(--background-color); color: var(--text-color); display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+        .header { background-color: var(--surface-color); padding: 1rem 1.5rem; text-align: center; font-size: 1.5rem; font-weight: bold; flex-shrink: 0; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3); z-index: 10; }
+        .main-content { flex-grow: 1; overflow-y: auto; padding: 1rem; padding-bottom: 200px; }
+        #file-input { display: none; }
+        #library-loader { text-align: center; padding: 3rem 1rem; }
+        #load-library-btn { display: inline-block; background-color: var(--primary-color); color: var(--text-color); padding: 1rem 2rem; border-radius: 50px; cursor: pointer; font-weight: bold; border: none; font-size: 1rem; }
+        #player-content { display: none; }
+        .section-title { font-size: 1.3rem; font-weight: bold; margin: 0.5rem; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--surface-color-hover); }
+        .playlist-controls { display: flex; gap: 0.5rem; margin: 0.5rem; margin-bottom: 1.5rem; }
+        #playlist-name-input { flex-grow: 1; padding: 0.8rem; border: none; border-radius: 8px; background-color: var(--surface-color-hover); color: var(--text-color); font-size: 1rem; }
+        .action-btn { padding: 0.8rem 1.2rem; border: none; border-radius: 8px; background-color: var(--primary-color); color: var(--text-color); cursor: pointer; font-weight: bold; }
+        #playlists-list, #song-list { list-style: none; }
+        .list-item { display: flex; align-items: center; padding-left: 1rem; border-radius: 8px; margin: 0.5rem; background-color: var(--surface-color); transition: background-color 0.2s; border-left: 4px solid transparent; }
+        .list-item:hover { background-color: var(--surface-color-hover); }
+        .song-item.playing { background-color: rgba(29, 185, 84, 0.2); border-left-color: var(--primary-color); }
+        .item-name { flex-grow: 1; padding: 1rem 0; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .song-item.playing .item-name { color: var(--primary-color); font-weight: bold; }
+        .delete-playlist-btn { background: none; border: none; color: var(--text-secondary-color); font-size: 1.5rem; padding: 0.5rem 1rem; cursor: pointer; transition: color 0.2s; }
+        .delete-playlist-btn:hover { color: #E91E63; }
+        #change-library-btn { background: none; border: 1px solid var(--surface-color-hover); color: var(--text-secondary-color); padding: 0.5rem 1rem; border-radius: 20px; cursor: pointer; font-size: 0.9rem; margin-bottom: 1rem; margin-left: 0.5rem; }
+        #change-library-btn:hover { border-color: var(--text-color); color: var(--text-color); }
+        #active-view { display: none; }
+        #active-view-header { padding: 0.5rem; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--surface-color-hover); margin-bottom: 1rem; }
+        #back-to-playlists-btn { background: none; border: none; color: var(--text-color); font-size: 1.5rem; cursor: pointer; padding: 0.5rem 1rem; }
+        #active-view-name { font-size: 1.3rem; font-weight: bold; }
+        #add-songs-btn { padding: 0.6rem 1rem; font-size: 0.9rem; }
+        .song-placeholder { padding: 2rem 0.5rem; color: var(--text-secondary-color); text-align: center; }
+        .music-player { position: fixed; bottom: 0; left: 0; width: 100%; background-color: #181818; padding: 1rem; border-top: 1px solid #282828; display: flex; flex-direction: column; gap: 0.5rem; z-index: 100; }
+        .song-info { text-align: center; white-space: nowrap; overflow: hidden; font-size: 1.1rem; font-weight: bold; }
+        .song-info-wrapper { display: inline-block; }
+        .marquee .song-info-wrapper { padding-left: 100%; animation: marquee 15s linear infinite; }
+        @keyframes marquee { 0% { transform: translate(0, 0); } 100% { transform: translate(-100%, 0); } }
+        .seekbar-container { display: flex; align-items: center; gap: 0.75rem; width: 100%; }
+        #seek-bar { -webkit-appearance: none; appearance: none; width: 100%; height: 5px; background: #4d4d4d; border-radius: 5px; outline: none; }
+        #seek-bar::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 16px; height: 16px; background: var(--text-color); border-radius: 50%; cursor: pointer; }
+        .time-display { font-size: 0.8rem; color: var(--text-secondary-color); min-width: 40px; }
+        #current-time { text-align: right; }
+        .controls { display: flex; justify-content: center; align-items: center; gap: 2rem; }
+        .control-btn { background: none; border: none; color: var(--text-secondary-color); font-size: 1.8rem; cursor: pointer; }
+        #play-pause-btn { background-color: var(--text-color); color: var(--background-color); width: 60px; height: 60px; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 2rem; }
+    </style>
+</head>
+<body>
+    <header class="header">Bilal Music Player</header>
+    <main class="main-content">
+        <input type="file" id="file-input" accept="audio/*" multiple>
+        <div id="library-loader">
+            <p style="margin-bottom: 1rem;">Load your music library to start</p>
+            <button id="load-library-btn">Load All Songs</button>
+        </div>
+        <div id="player-content">
+            <div id="main-view">
+                 <div id="playlist-management-view">
+                    <button id="change-library-btn">← Change Library</button>
+                    <div class="section-title">Create New Playlist</div>
+                    <div class="playlist-controls">
+                        <input type="text" id="playlist-name-input" placeholder="New Playlist Name...">
+                        <button id="create-playlist-btn" class="action-btn">Create</button>
+                    </div>
+                    <div class="section-title">Your Playlists</div>
+                    <ul id="playlists-list"></ul>
+                </div>
+            </div>
+            <div id="active-view">
+                <div id="active-view-header">
+                    <button id="back-to-playlists-btn">&leftarrow;</button>
+                    <span id="active-view-name"></span>
+                    <button id="add-songs-btn" class="action-btn">+ Add Songs</button>
+                </div>
+                <ul id="song-list"></ul>
+            </div>
+        </div>
+    </main>
+    <div class="music-player">
+        <div class="song-info" id="current-song-title-container"><div class="song-info-wrapper"><span id="current-song-title">No song playing</span></div></div>
+        <div class="seekbar-container"><span id="current-time" class="time-display">0:00</span><input type="range" id="seek-bar" value="0" step="1"><span id="total-duration" class="time-display">0:00</span></div>
+        <div class="controls"><button class="control-btn" id="prev-btn">⏮</button><button class="control-btn" id="play-pause-btn">▶️</button><button class="control-btn" id="next-btn">⏭</button></div>
+    </div>
+    <audio id="audio-player"></audio>
+    <script>
+        if ('serviceWorker' in navigator) { window.addEventListener('load', () => { navigator.serviceWorker.register('./sw.js'); }); }
+        document.addEventListener('DOMContentLoaded', () => {
+            const audioPlayer = document.getElementById('audio-player');
+            const playPauseBtn = document.getElementById('play-pause-btn');
+            const prevBtn = document.getElementById('prev-btn');
+            const nextBtn = document.getElementById('next-btn');
+            const seekBar = document.getElementById('seek-bar');
+            const currentTimeDisplay = document.getElementById('current-time');
+            const totalDurationDisplay = document.getElementById('total-duration');
+            const currentSongTitle = document.getElementById('current-song-title');
+            const fileInput = document.getElementById('file-input');
+            const libraryLoader = document.getElementById('library-loader');
+            const loadLibraryBtn = document.getElementById('load-library-btn');
+            const changeLibraryBtn = document.getElementById('change-library-btn');
+            const playerContent = document.getElementById('player-content');
+            const songList = document.getElementById('song-list');
+            const mainView = document.getElementById('main-view');
+            const activeView = document.getElementById('active-view');
+            const activeViewName = document.getElementById('active-view-name');
+            const addSongsBtn = document.getElementById('add-songs-btn');
+            const backBtn = document.getElementById('back-to-playlists-btn');
+            const playlistNameInput = document.getElementById('playlist-name-input');
+            const createPlaylistBtn = document.getElementById('create-playlist-btn');
+            const playlistsList = document.getElementById('playlists-list');
+            let musicLibrary = new Map();
+            let allPlaylists = {};
+            let currentQueue = [];
+            let currentTrackIndex = 0;
+            let isPlaying = false;
+            let isLibraryLoaded = false;
+            let context = {};
+            const playTrack = () => { isPlaying = true; audioPlayer.play(); };
+            const pauseTrack = () => { isPlaying = false; audioPlayer.pause(); };
+            const loadTrack = (index, shouldPlay = false) => {
+                if (index >= 0 && index < currentQueue.length) {
+                    currentTrackIndex = index;
+                    const track = currentQueue[index];
+                    audioPlayer.src = track.url;
+                    currentSongTitle.textContent = track.name.replace(/\.[^/.]+$/, "");
+                    if (shouldPlay) audioPlayer.play().catch(e => console.error("Playback error:", e));
+                }
+                updateAllSongItemsUI();
+            };
+            const nextTrack = () => { if (currentQueue.length > 0) loadTrack((currentTrackIndex + 1) % currentQueue.length, true); };
+            const prevTrack = () => { if (currentQueue.length > 0) loadTrack((currentTrackIndex - 1 + currentQueue.length) % currentQueue.length, true); };
+            const formatTime = (s) => isNaN(s) ? '0:00' : `${Math.floor(s/60)}:${Math.floor(s%60).toString().padStart(2,'0')}`;
+            const updateSeekBar = () => { if (!isPlaying || isNaN(audioPlayer.duration)) return; seekBar.value = (audioPlayer.currentTime / audioPlayer.duration) * 100; currentTimeDisplay.textContent = formatTime(audioPlayer.currentTime);};
+            const showActiveView = (title, songs, options = {}) => {
+                activeViewName.textContent = title;
+                addSongsBtn.style.display = options.isPlaylist ? 'block' : 'none';
+                mainView.style.display = 'none';
+                activeView.style.display = 'block';
+                renderSongList(songs);
+                currentQueue = songs;
+            };
+            const showMainView = () => { mainView.style.display = 'block'; activeView.style.display = 'none'; renderPlaylistsList(); };
+            const renderSongList = (songs) => {
+                songList.innerHTML = '';
+                if (!songs || songs.length === 0) { songList.innerHTML = '<div class="song-placeholder">This view is empty.</div>'; return; }
+                songs.forEach(songInfo => {
+                    const li = document.createElement('li');
+                    li.className = 'list-item song-item';
+                    li.dataset.songId = songInfo.id;
+                    const nameSpan = document.createElement('span');
+                    nameSpan.className = 'item-name';
+                    nameSpan.textContent = songInfo.name;
+                    nameSpan.onclick = () => playSong(songInfo.id, songs);
+                    li.appendChild(nameSpan);
+                    songList.appendChild(li);
+                });
+                updateAllSongItemsUI();
+            };
+            const playSong = (songId, songsInView) => {
+                if (!isLibraryLoaded) {
+                    alert("गाना बजाने के लिए, कृपया पहले एक बार अपनी म्यूजिक लाइब्रेरी लोड करें।");
+                    context = { action: 'initialLoad', songToPlay: songId, playlistToQueue: songsInView };
+                    fileInput.click();
+                    return;
+                }
+                if (musicLibrary.has(songId)) {
+                    currentQueue = songsInView.map(s => musicLibrary.get(s.id)).filter(Boolean);
+                    const songIndex = currentQueue.findIndex(s => s.id === songId);
+                    if (songIndex > -1) loadTrack(songIndex, true);
+                } else {
+                    alert(`"${songId}" गाना आपकी लाइब्रेरी में नहीं मिला। कृपया अपनी लाइब्रेरी अपडेट करें।`);
+                }
+            };
+            const updateAllSongItemsUI = () => {
+                document.querySelectorAll('.song-item').forEach(item => {
+                    const isCurrentlyPlaying = isPlaying && currentQueue[currentTrackIndex]?.id === item.dataset.songId;
+                    item.classList.toggle('playing', isCurrentlyPlaying);
+                });
+            };
+            const savePlaylists = () => localStorage.setItem('bilalMusicPlaylists', JSON.stringify(allPlaylists));
+            const loadPlaylists = () => {
+                const stored = localStorage.getItem('bilalMusicPlaylists');
+                if (stored) allPlaylists = JSON.parse(stored);
+            };
+            const renderPlaylistsList = () => {
+                playlistsList.innerHTML = '';
+                const allSongsItem = document.createElement('li');
+                allSongsItem.className = 'list-item playlist-item';
+                allSongsItem.innerHTML = `<span class="item-name">All Songs (${musicLibrary.size})</span>`;
+                allSongsItem.onclick = () => {
+                    if (!isLibraryLoaded) {
+                        alert("पहले अपनी म्यूजिक लाइब्रेरी लोड करें।");
+                        context = { action: 'initialLoad' };
+                        fileInput.click();
+                    } else {
+                        showActiveView("All Songs", Array.from(musicLibrary.values()), { isPlaylist: false });
+                    }
+                };
+                playlistsList.appendChild(allSongsItem);
+                Object.keys(allPlaylists).forEach(name => {
+                    const li = document.createElement('li');
+                    li.className = 'list-item playlist-item';
+                    const nameSpan = document.createElement('span');
+                    nameSpan.className = 'item-name';
+                    const songIds = allPlaylists[name] || [];
+                    nameSpan.textContent = `${name} (${songIds.length})`;
+                    nameSpan.onclick = () => {
+                        const songs = songIds.map(songInfo => musicLibrary.get(songInfo.id)).filter(Boolean);
+                        showActiveView(name, songs, { isPlaylist: true });
+                    };
+                    li.appendChild(nameSpan);
+                    const deleteBtn = document.createElement('button');
+                    deleteBtn.innerHTML = '&times;';
+                    deleteBtn.className = 'delete-playlist-btn';
+                    deleteBtn.onclick = (e) => { e.stopPropagation(); deletePlaylist(name); };
+                    li.appendChild(deleteBtn);
+                    playlistsList.appendChild(li);
+                });
+            };
+            const createPlaylist = () => {
+                const name = playlistNameInput.value.trim();
+                if (name && !allPlaylists[name]) {
+                    allPlaylists[name] = [];
+                    playlistNameInput.value = '';
+                    savePlaylists();
+                    renderPlaylistsList();
+                }
+            };
+            const deletePlaylist = (name) => {
+                if (confirm(`Are you sure you want to delete the playlist "${name}"?`)) {
+                    delete allPlaylists[name];
+                    savePlaylists();
+                    showMainView();
+                }
+            };
+            fileInput.addEventListener('change', (event) => {
+                const files = Array.from(event.target.files);
+                if (files.length === 0) return;
+                if (context.action === 'initialLoad') {
+                    musicLibrary.forEach(song => URL.revokeObjectURL(song.url));
+                    musicLibrary.clear();
+                    files.forEach(file => { musicLibrary.set(file.name, { id: file.name, name: file.name, url: URL.createObjectURL(file) }); });
+                    isLibraryLoaded = true;
+                    libraryLoader.style.display = 'none';
+                    playerContent.style.display = 'block';
+                    showMainView();
+                    if (context.songToPlay) { playSong(context.songToPlay, context.playlistToQueue); }
+                } else if (context.action === 'addSongs') {
+                    const playlist = allPlaylists[context.playlistName];
+                    const existingNames = new Set(playlist.map(songInfo => songInfo.name));
+                    let addedCount = 0;
+                    files.forEach(file => {
+                        if (!musicLibrary.has(file.name)) {
+                           musicLibrary.set(file.name, { id: file.name, name: file.name, url: URL.createObjectURL(file) });
+                        }
+                        if (!existingNames.has(file.name)) {
+                            playlist.push({name: file.name, id: file.name});
+                            addedCount++;
+                        }
+                    });
+                    if (addedCount > 0) savePlaylists();
+                    const updatedSongs = playlist.map(songInfo => musicLibrary.get(songInfo.id)).filter(Boolean);
+                    showActiveView(context.playlistName, updatedSongs, { isPlaylist: true });
+                }
+                context = {};
+                fileInput.value = '';
+            });
+            loadLibraryBtn.onclick = () => { context = { action: 'initialLoad' }; fileInput.click(); };
+            changeLibraryBtn.onclick = () => {
+                if (confirm("This will clear your current library and ask you to load songs again. Are you sure?")) {
+                    libraryLoader.style.display = 'block';
+                    playerContent.style.display = 'none';
+                    isLibraryLoaded = false;
+                    musicLibrary.clear();
+                    audioPlayer.src = "";
+                    currentSongTitle.textContent = "No song playing";
+                }
+            };
+            addSongsBtn.onclick = () => {
+                alert("एक से ज़्यादा गाने चुनने के लिए:\n\n1. अपनी गैलरी में किसी एक गाने पर उंगली दबाए रखें (Long Press करें)।\n2. इसके बाद आप कई गाने चुन पाएँगे।");
+                context = { action: 'addSongs', playlistName: activeViewName.textContent };
+                fileInput.click();
+            };
+            backBtn.onclick = showMainView;
+            createPlaylistBtn.onclick = createPlaylist;
+            playPauseBtn.onclick = () => { if (isPlaying) pauseTrack(); else if (audioPlayer.src) playTrack(); };
+            audioPlayer.onplay = () => { isPlaying = true; playPauseBtn.innerHTML = '⏸️'; updateAllSongItemsUI(); };
+            audioPlayer.onpause = () => { isPlaying = false; playPauseBtn.innerHTML = '▶️'; updateAllSongItemsUI(); };
+            nextBtn.onclick = nextTrack;
+            prevBtn.onclick = prevTrack;
+            audioPlayer.onended = nextTrack;
+            audioPlayer.ontimeupdate = updateSeekBar;
+            audioPlayer.onloadedmetadata = () => totalDurationDisplay.textContent = formatTime(audioPlayer.duration);
+            seekBar.onchange = (e) => { if(!isNaN(audioPlayer.duration)) audioPlayer.currentTime = (e.target.value / 100) * audioPlayer.duration; };
+            loadPlaylists();
+            showMainView();
+            libraryLoader.style.display = 'block';
+            playerContent.style.display = 'none';
+        });
+    </script>
+</body>
+</html>
