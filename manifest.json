@@ -1,7 +1,7 @@
 {
   "name": "Bilal Music Player",
   "short_name": "Music Player",
-  "start_url": ".",
+  "start_url": "/app/",
   "display": "standalone",
   "background_color": "#121212",
   "theme_color": "#1DB954",
