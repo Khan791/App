@@ -6,7 +6,7 @@
     <title>Bilal Music Player</title>
     <!-- PWA Meta Tags -->
     <meta name="theme-color" content="#1DB954"/>
-    <link rel="manifest" href="manifest.json">
+    <link rel="manifest" href="/App/manifest.json">
     <style>
         :root { --primary-color: #1DB954; --background-color: #121212; --surface-color: #181818; --surface-color-hover: #282828; --text-color: #FFFFFF; --text-secondary-color: #B3B3B3; }
         * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
@@ -90,7 +90,7 @@
     </div>
     <audio id="audio-player"></audio>
     <script>
-        if ('serviceWorker' in navigator) { window.addEventListener('load', () => { navigator.serviceWorker.register('./sw.js'); }); }
+        if ('serviceWorker' in navigator) { window.addEventListener('load', () => { navigator.serviceWorker.register('./App/sw.js'); }); }
         document.addEventListener('DOMContentLoaded', () => {
             const audioPlayer = document.getElementById('audio-player');
             const playPauseBtn = document.getElementById('play-pause-btn');
